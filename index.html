@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀘스트 잉글리시 (Quest English) - 판타지 RPG 영어 모험</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            overflow-x: hidden;
+            user-select: none;
+        }
+        .font-fantasy {
+            font-family: 'Cinzel', 'Noto Sans KR', serif;
+        }
+        
+        /* 판타지 커스텀 스타일 및 애니메이션 */
+        .rpg-panel {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));
+            border: 2px solid #475569;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        .rpg-gold-border {
+            border-color: #d97706;
+            box-shadow: 0 0 15px rgba(217, 119, 6, 0.25), inset 0 0 10px rgba(217, 119, 6, 0.1);
+        }
+        .rpg-btn {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .rpg-btn:active {
+            transform: scale(0.96);
+        }
+        .rpg-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+        }
+        .rpg-btn:hover::after {
+            left: 150%;
+        }
+
+        /* 전투 애니메이션 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-2deg); }
+            40% { transform: translateX(10px) rotate(2deg); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes slashEffect {
+            0% { opacity: 0; transform: scale(0.5) rotate(-45deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(0deg); }
+            100% { opacity: 0; transform: scale(1.5) rotate(15deg); }
+        }
+        .animate-slash {
+            animation: slashEffect 0.45s ease-out forwards;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.95); }
+        }
+        .ultimate-ready {
+            animation: pulseGlow 1.5s infinite;
+        }
+
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0b0f19] to-black">
+
+    <!-- 상단 알림 토스트 (alert 대체) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-11/12 max-w-md"></div>
+
+    <!-- 메인 게임 컨테이너 -->
+    <div id="app" class="w-full max-w-4xl min-h-[600px] flex flex-col">
+        
+        <!-- 1. 타이틀 및 로그인 화면 -->
+        <section id="screen-login" class="rpg-panel rpg-gold-border rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center my-auto">
+            <div class="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-bold tracking-wider">
+                <span>⚔️</span> ARCADIA CHRONICLES
+            </div>
+            <h1 class="font-fantasy text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 drop-shadow-lg mb-3">
+                QUEST ENGLISH
+            </h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-lg mb-8 leading-relaxed">
+                마왕 <span class="text-purple-400 font-bold">'사일런스'</span>의 저주로 언어의 빛을 잃은 아르카디아 대륙.<br>
+                고대 언어(영어)의 힘을 깨운 용사가 되어 단어의 검과 문법의 마법으로 세상을 구원하세요!
+            </p>
+
+            <!-- 로그인 & 이어하기 카드 -->
+            <div class="w-full max-w-md bg-slate-900/80 border border-slate-700 rounded-xl p-5 mb-6">
+                <!-- 로그인 / 회원가입 전환 탭 -->
+                <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800 mb-4">
+                    <button type="button" id="auth-tab-login" onclick="switchAuthMode('login')" class="py-2 rounded-md bg-amber-500 text-slate-950 font-black text-xs sm:text-sm transition">
+                        🔑 용사 로그인
+                    </button>
+                    <button type="button" id="auth-tab-register" onclick="switchAuthMode('register')" class="py-2 rounded-md text-slate-400 hover:text-white font-bold text-xs sm:text-sm transition">
+                        📝 신규 회원가입
+                    </button>
+                </div>
+
+                <!-- 로그인 폼 -->
+                <div id="form-login" class="space-y-3">
+                    <input type="text" id="login-username" placeholder="용사 아이디 입력" 
+                        class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-sm">
+                    <input type="password" id="login-password" placeholder="비밀번호 입력" 
+                        onkeydown="if(event.key==='Enter') handleAccountLogin()"
+                        class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-sm">
+                    <button type="button" onclick="handleAccountLogin()" class="rpg-btn w-full py-3 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black text-base shadow-lg">
+                        ⚡ 모험 기록 이어하기
+                    </button>
+                </div>
+
+                <!-- 회원가입 폼 -->
+                <div id="form-register" class="hidden space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="reg-username" placeholder="새 아이디 (중복 불가)" oninput="resetIdCheck()"
+                            class="flex-1 px-4 py-3 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-sm">
+                        <button type="button" onclick="checkDuplicateId()" class="px-3.5 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 border border-slate-500 text-amber-300 font-bold text-xs shrink-0">
+                            중복 확인
+                        </button>
+                    </div>
+                    <p id="id-check-msg" class="text-left text-xs text-slate-400 px-1">아이디 입력 후 중복 확인을 눌러주세요.</p>
+                    <input type="password" id="reg-password" placeholder="비밀번호 설정 (4자 이상)" 
+                        class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-sm">
+                    <input type="password" id="reg-password-confirm" placeholder="비밀번호 재입력 확인" 
+                        onkeydown="if(event.key==='Enter') handleAccountRegister()"
+                        class="w-full px-4 py-3 rounded-lg bg-slate-800 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 text-sm">
+                    <button type="button" onclick="handleAccountRegister()" class="rpg-btn w-full py-3 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-base shadow-lg">
+                        📜 회원가입 및 용사 등록하기
+                    </button>
+                </div>
+
+                <div class="relative my-4">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                    <div class="relative flex justify-center text-xs"><span class="px-2 bg-slate-900 text-slate-400">또는 간편 체험</span></div>
+                </div>
+                <button type="button" onclick="startGuestMode()" class="rpg-btn w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-sm">
+                    🛡️ 견습 모험가(게스트)로 바로 체험하기
+                </button>
+            </div>
+            <p class="text-xs text-slate-500">* 효과음 재생을 위해 버튼 클릭 시 오디오가 활성화됩니다.</p>
+        </section>
+
+        <!-- 2. 용사 등록 (프로필 & 길드 입단 테스트) 화면 -->
+        <section id="screen-profile-setup" class="hidden rpg-panel rpg-gold-border rounded-2xl p-6 sm:p-8 my-auto">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-4 mb-6">
+                <div>
+                    <span class="text-xs text-amber-400 font-bold">STEP 1. 모험가 길드 등록</span>
+                    <h2 class="text-2xl font-black text-white">용사 프로필 생성</h2>
+                </div>
+                <span class="text-3xl">🏰</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 외형 및 이름 -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5">용사의 이름</label>
+                        <input type="text" id="setup-name" placeholder="예: 아서, 루나" maxlength="12"
+                            class="w-full px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-white focus:border-amber-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5">아바타 선택</label>
+                        <div class="grid grid-cols-4 gap-2" id="avatar-selector">
+                            <button type="button" onclick="selectAvatar('🧙‍♂️')" class="avatar-opt p-3 rounded-xl bg-slate-800 border-2 border-amber-500 text-3xl flex items-center justify-center">🧙‍♂️</button>
+                            <button type="button" onclick="selectAvatar('🧝‍♀️')" class="avatar-opt p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-3xl flex items-center justify-center">🧝‍♀️</button>
+                            <button type="button" onclick="selectAvatar('⚔️')" class="avatar-opt p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-3xl flex items-center justify-center">⚔️</button>
+                            <button type="button" onclick="selectAvatar('🦊')" class="avatar-opt p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-3xl flex items-center justify-center">🦊</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5">출신 배경 (학습 목표)</label>
+                        <select id="setup-goal" class="w-full px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-white text-sm focus:border-amber-500 focus:outline-none">
+                            <option value="자유로운 모험가 (일상 회화)">🌍 자유로운 모험가 (일상 회화)</option>
+                            <option value="신대륙 여행자 (여행 영어)">⛵ 신대륙 여행자 (여행 영어)</option>
+                            <option value="고대 마법 탐구자 (어휘/문법 심화)">📖 고대 마법 탐구자 (어휘/문법 심화)</option>
+                            <option value="왕국 외교관 (비즈니스/고급)">👑 왕국 외교관 (비즈니스/고급)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 길드 입단 테스트 (초기 실력 진단) -->
+                <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-cyan-400">✨ 길드 입단 능력 진단 (선택)</span>
+                            <span class="text-xs text-slate-400">시작 추천 난이도 결정</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mb-3 bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                            🧚‍♀️ <b>기억의 요정:</b> "용사님의 현재 감각을 살짝 확인해 볼까요? 아래 문장의 빈칸에 알맞은 말을 골라주세요!"
+                        </p>
+                        <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 mb-3">
+                            <p class="text-sm font-bold text-amber-200 mb-1">Q. "I _____ to the magic forest yesterday."</p>
+                            <p class="text-xs text-slate-400">(나는 어제 마법의 숲에 갔다.)</p>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2" id="placement-options">
+                            <button type="button" onclick="selectPlacement('beginner', this)" class="place-btn py-2 px-2 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold hover:border-amber-400">go (초급 추천)</button>
+                            <button type="button" onclick="selectPlacement('intermediate', this)" class="place-btn py-2 px-2 rounded-lg bg-slate-800 border border-amber-500 text-xs font-bold text-amber-300">went (중급 추천)</button>
+                            <button type="button" onclick="selectPlacement('advanced', this)" class="place-btn py-2 px-2 rounded-lg bg-slate-800 border border-slate-600 text-xs font-bold hover:border-amber-400">have gone (고급)</button>
+                        </div>
+                    </div>
+                    <p id="placement-feedback" class="text-xs text-emerald-400 mt-3 font-medium">
+                        ✔️ 'went' 선택됨: 과거 시제를 아시는군요! [중급: 신비의 숲]까지 바로 도전 가능합니다.
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="completeProfileSetup()" class="rpg-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-slate-950 font-black text-base shadow-lg">
+                📜 모험가 길드 증서 발급 및 모험 출발!
+            </button>
+        </section>
+
+        <!-- 3. 메인 월드맵 & 길드 로비 화면 -->
+        <section id="screen-hub" class="hidden flex-col gap-4">
+            <!-- 상단 용사 길드 증서 (프로필 상태바) -->
+            <header class="rpg-panel rpg-gold-border rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5 w-full sm:w-auto">
+                    <div id="hub-avatar" class="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-inner shrink-0">
+                        🧙‍♂️
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span id="hub-title-badge" class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold">견습 모험가</span>
+                            <span id="hub-account-badge" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[11px]">게스트</span>
+                        </div>
+                        <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                            <span id="hub-name">용사</span>
+                            <span class="text-sm font-bold text-amber-400">Lv.<span id="hub-level">1</span></span>
+                        </h2>
+                        <p id="hub-goal" class="text-xs text-slate-400">자유로운 모험가</p>
+                    </div>
+                </div>
+
+                <!-- 경험치 & 골드 & 스탯 요약 -->
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <div class="bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-700 text-xs">
+                        <div class="flex justify-between gap-4 mb-1">
+                            <span class="text-slate-400">EXP</span>
+                            <span class="text-cyan-400 font-bold"><span id="hub-exp">0</span> / <span id="hub-max-exp">100</span></span>
+                        </div>
+                        <div class="w-28 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div id="hub-exp-bar" class="h-full bg-gradient-to-r from-cyan-500 to-blue-400 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-700 text-xs flex items-center gap-2">
+                        <span class="text-lg">💰</span>
+                        <div>
+                            <div class="text-slate-400 text-[10px]">보유 골드</div>
+                            <div id="hub-gold" class="text-amber-400 font-black text-sm">100 G</div>
+                        </div>
+                    </div>
+
+                    <button onclick="openGuildCardModal()" class="rpg-btn px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                        <span>🪪</span> 길드 증서
+                    </button>
+                </div>
+            </header>
+
+            <!-- 메인 탭 네비게이션 -->
+            <nav class="grid grid-cols-3 gap-2">
+                <button onclick="switchHubTab('map')" id="tab-btn-map" class="py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md flex items-center justify-center gap-1.5">
+                    <span>🗺️</span> 모험 월드맵
+                </button>
+                <button onclick="switchHubTab('curse')" id="tab-btn-curse" class="py-3 rounded-xl bg-slate-800/90 text-slate-300 hover:bg-slate-800 font-bold text-sm border border-slate-700 flex items-center justify-center gap-1.5 relative">
+                    <span>🔮</span> 저주 정화 (오답)
+                    <span id="curse-count-badge" class="hidden px-1.5 py-0.5 text-[10px] rounded-full bg-rose-600 text-white font-black">0</span>
+                </button>
+                <button onclick="switchHubTab('shop')" id="tab-btn-shop" class="py-3 rounded-xl bg-slate-800/90 text-slate-300 hover:bg-slate-800 font-bold text-sm border border-slate-700 flex items-center justify-center gap-1.5">
+                    <span>⚔️</span> 대장간 & 도감
+                </button>
+            </nav>
+
+            <!-- 탭 1: 월드맵 (초급 / 중급 / 고급 지역 선택) -->
+            <div id="hub-tab-map" class="space-y-4">
+                <!-- 기억의 요정 스토리 브리핑 -->
+                <div class="rpg-panel rounded-xl p-4 flex items-start gap-3 border-cyan-500/40">
+                    <div class="text-3xl animate-float shrink-0">🧚‍♀️</div>
+                    <div class="text-xs sm:text-sm">
+                        <div class="font-bold text-cyan-300 mb-0.5">기억의 요정 루미 (Lumi)</div>
+                        <p id="fairy-hub-msg" class="text-slate-300 leading-relaxed">
+                            "용사님! 아르카디아 대륙 곳곳에 마왕 사일런스의 문맹 마수들이 출몰하고 있어요. 아래 지역을 선택해 언어의 수정 파편을 되찾아 주세요!"
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 3단계 난이도 지역 카드 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 초급 지역 -->
+                    <div class="rpg-panel rounded-2xl p-5 flex flex-col justify-between border-emerald-500/50 hover:border-emerald-400 transition">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-black">초급 (Lv.1~)</span>
+                                <span class="text-2xl">🌿</span>
+                            </div>
+                            <h3 class="text-lg font-black text-white mb-1">시작의 마을 & 초원</h3>
+                            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                                기초 필수 영단어, 기본 문장 어순, 생존 회화를 익히는 평화롭지만 마수가 숨어든 초원.
+                            </p>
+                            <div class="space-y-1.5 text-xs bg-slate-900/80 p-3 rounded-lg border border-slate-800 mb-4">
+                                <div class="text-slate-300">👾 출현: <span class="text-emerald-300 font-bold">슬라임 워드, 고블린 스펠러</span></div>
+                                <div class="text-slate-300">📚 학습: <span class="text-slate-200">기초 어휘 · 현재시제 · 인사 회화</span></div>
+                            </div>
+                        </div>
+                        <button onclick="startAdventure('beginner')" class="rpg-btn w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-black text-sm shadow-lg">
+                            ⚔️ 초급 지역 출격
+                        </button>
+                    </div>
+
+                    <!-- 중급 지역 -->
+                    <div class="rpg-panel rounded-2xl p-5 flex flex-col justify-between border-blue-500/50 hover:border-blue-400 transition">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="px-2.5 py-1 rounded-md bg-blue-500/20 text-blue-300 text-xs font-black">중급 (Lv.3~)</span>
+                                <span class="text-2xl">🌲</span>
+                            </div>
+                            <h3 class="text-lg font-black text-white mb-1">신비의 숲 & 고대 유적</h3>
+                            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                                시제 변화와 핵심 숙어, 상황별 실전 대화가 마법처럼 얽혀 있는 고대 유적지.
+                            </p>
+                            <div class="space-y-1.5 text-xs bg-slate-900/80 p-3 rounded-lg border border-slate-800 mb-4">
+                                <div class="text-slate-300">👾 출현: <span class="text-blue-300 font-bold">유적 가고일, 시제 망령</span></div>
+                                <div class="text-slate-300">📚 학습: <span class="text-slate-200">심화 어휘 · 과거/완료 · 여행/상황 회화</span></div>
+                            </div>
+                        </div>
+                        <button onclick="startAdventure('intermediate')" class="rpg-btn w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm shadow-lg">
+                            ⚔️ 중급 지역 출격
+                        </button>
+                    </div>
+
+                    <!-- 고급 지역 -->
+                    <div class="rpg-panel rounded-2xl p-5 flex flex-col justify-between border-purple-500/50 hover:border-purple-400 transition">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 text-xs font-black">고급 (BOSS)</span>
+                                <span class="text-2xl">🏰</span>
+                            </div>
+                            <h3 class="text-lg font-black text-white mb-1">침묵의 마왕성</h3>
+                            <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+                                원어민 관용구, 복잡한 가정법과 뉘앙스 회화로 마왕 사일런스의 결계를 부수는 최종 결전지.
+                            </p>
+                            <div class="space-y-1.5 text-xs bg-slate-900/80 p-3 rounded-lg border border-slate-800 mb-4">
+                                <div class="text-slate-300">👑 보스: <span class="text-purple-300 font-bold">마왕 사일런스 (Silence)</span></div>
+                                <div class="text-slate-300">📚 학습: <span class="text-slate-200">고급 어휘 · 가정법/분사 · 원어민 회화</span></div>
+                            </div>
+                        </div>
+                        <button onclick="startAdventure('advanced')" class="rpg-btn w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg">
+                            🔥 마왕성 결전 돌입
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 탭 2: 저주 정화 (망각 곡선 방어 오답 복습 시스템) -->
+            <div id="hub-tab-curse" class="hidden rpg-panel rounded-2xl p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-4 mb-4">
+                    <div>
+                        <h3 class="text-lg font-black text-rose-400 flex items-center gap-2">
+                            <span>🔮</span> 저주받은 기억 정화소 (오답 복습)
+                        </h3>
+                        <p class="text-xs text-slate-400">전투에서 놓쳤던 문장과 단어들이 저주 마수로 변해 봉인되어 있습니다. 정화 시 보너스 EXP를 획득합니다!</p>
+                    </div>
+                    <button id="btn-start-purify" onclick="startPurificationBattle()" class="rpg-btn px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shrink-0">
+                        ✨ 저주 정화 전투 시작
+                    </button>
+                </div>
+                <div id="curse-list" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+                    <!-- 동적 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 탭 3: 대장간 & 용사 스탯 강화 -->
+            <div id="hub-tab-shop" class="hidden rpg-panel rounded-2xl p-6">
+                <div class="border-b border-slate-700 pb-4 mb-4">
+                    <h3 class="text-lg font-black text-amber-400 flex items-center gap-2">
+                        <span>⚒️</span> 왕국 대장간 & 언어 스탯 강화
+                    </h3>
+                    <p class="text-xs text-slate-400">모험으로 모은 골드로 무기와 마법서를 강화하면 전투 공격력과 최대 체력이 상승합니다!</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="shop-items">
+                    <!-- 동적 렌더링 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 고퀄리티 전략 전투 화면 -->
+        <section id="screen-battle" class="hidden flex-col gap-3">
+            <!-- 상단 전투 헤더 (지역 정보, 콤보, 후퇴) -->
+            <div class="rpg-panel rounded-xl px-4 py-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span id="battle-stage-badge" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 text-xs font-black">초급 스테이지</span>
+                    <span id="battle-progress" class="text-xs text-slate-400 font-bold">Wave 1 / 4</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div id="combo-display" class="px-3 py-1 rounded-full bg-slate-800 border border-slate-600 text-xs font-black text-amber-400">
+                        🔥 0 COMBO
+                    </div>
+                    <button onclick="retreatToHub()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-600">
+                        🏃 후퇴
+                    </button>
+                </div>
+            </div>
+
+            <!-- 배틀 아레나 (몬스터 & 용사 시각 연출) -->
+            <div class="rpg-panel rpg-gold-border rounded-2xl p-4 sm:p-6 relative overflow-hidden bg-gradient-to-b from-slate-900 via-indigo-950/40 to-slate-950">
+                <!-- 피격/베기 이펙트 오버레이 -->
+                <div id="vfx-overlay" class="pointer-events-none absolute inset-0 flex items-center justify-center z-20 text-7xl opacity-0">⚔️</div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <!-- 몬스터 상태창 -->
+                    <div id="monster-card" class="bg-slate-950/80 border border-slate-700 rounded-xl p-4 relative">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span id="monster-weakness" class="inline-block px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-bold mb-1">
+                                    약점: 어휘 베기
+                                </span>
+                                <h3 id="monster-name" class="text-lg font-black text-white">슬라임 워드</h3>
+                            </div>
+                            <div id="monster-sprite" class="text-5xl animate-float select-none">👾</div>
+                        </div>
+
+                        <!-- 몬스터 HP 바 -->
+                        <div class="mb-2">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-rose-400 font-bold">HP</span>
+                                <span class="text-slate-300 font-bold"><span id="monster-hp">100</span> / <span id="monster-max-hp">100</span></span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                                <div id="monster-hp-bar" class="h-full bg-gradient-to-r from-rose-600 to-red-400 rounded-full transition-all duration-300" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 몬스터 실드 (브레이크 게이지) -->
+                        <div>
+                            <div class="flex justify-between text-[11px] mb-1">
+                                <span class="text-cyan-400 font-bold">🛡️ 실드 (0이 되면 브레이크!)</span>
+                                <span id="monster-shield-text" class="text-cyan-300 font-bold">2 / 2</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="monster-shield-bar" class="h-full bg-cyan-400 transition-all duration-300" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 용사(플레이어) 상태창 & 궁극기 -->
+                    <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-4 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-3">
+                                <div id="battle-player-avatar" class="text-4xl bg-slate-800 p-2 rounded-xl border border-amber-500/40">🧙‍♂️</div>
+                                <div>
+                                    <div id="battle-player-name" class="font-black text-white text-base">용사</div>
+                                    <div class="text-xs text-amber-400 font-bold">공격력 <span id="battle-atk">25</span> · 방어력 <span id="battle-def">10</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 용사 HP 바 -->
+                        <div class="mb-3">
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-emerald-400 font-bold">용사 체력 (HP)</span>
+                                <span class="text-slate-300 font-bold"><span id="player-hp">100</span> / <span id="player-max-hp">100</span></span>
+                            </div>
+                            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                                <div id="player-hp-bar" class="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full transition-all duration-300" style="width: 100%"></div>
+                            </div>
+                        </div>
+
+                        <!-- 궁극기 게이지 (언어의 폭풍) -->
+                        <div>
+                            <div class="flex justify-between items-center text-xs mb-1">
+                                <span class="text-amber-400 font-bold">⚡ 궁극기 게이지 (언어의 폭풍)</span>
+                                <span id="ult-percent" class="text-amber-300 font-black">0%</span>
+                            </div>
+                            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden mb-2">
+                                <div id="ult-bar" class="h-full bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <button id="btn-ultimate" onclick="triggerUltimate()" disabled
+                                class="w-full py-2 rounded-lg bg-slate-800 text-slate-500 font-black text-xs border border-slate-700 transition">
+                                ⚡ 궁극기 [언어의 폭풍] 충전 중...
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 전투 액션 & 문제 풀이 패널 -->
+            <div class="rpg-panel rounded-2xl p-4 sm:p-6">
+                <!-- 스킬 유형 배지 & 타이머 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span id="battle-mode-badge" class="px-3 py-1 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-black">
+                            ⚔️ 어휘 베기 (단어 공격)
+                        </span>
+                        <span id="battle-category-tag" class="text-xs text-slate-400">핵심 어휘</span>
+                    </div>
+                    <div class="text-xs font-bold text-amber-400 flex items-center gap-1">
+                        <span>⏱️ 빠른 정답 시 크리티컬!</span>
+                    </div>
+                </div>
+
+                <!-- 문제 제시 영역 -->
+                <div class="bg-slate-950/90 border border-slate-700 rounded-xl p-4 mb-4">
+                    <p id="question-prompt" class="text-base sm:text-lg font-bold text-white leading-relaxed mb-1">
+                        문제 텍스트가 여기에 표시됩니다.
+                    </p>
+                    <p id="question-sub" class="text-xs sm:text-sm text-slate-400">
+                        보조 힌트 또는 한국어 해석
+                    </p>
+                </div>
+
+                <!-- 인터랙티브 입력 영역 (객관식 / 문장 조립 / 패링 터치) -->
+                <div id="battle-interaction-area">
+                    <!-- 동적 생성 -->
+                </div>
+
+                <!-- 기억의 요정 실시간 친절 해설 패널 (정답/오답 후 표시) -->
+                <div id="fairy-explanation-box" class="hidden mt-4 rounded-xl p-4 border transition-all">
+                    <div class="flex items-start gap-3">
+                        <div class="text-3xl shrink-0">🧚‍♀️</div>
+                        <div class="flex-1">
+                            <div id="explanation-header" class="font-black text-sm mb-1">정답입니다!</div>
+                            <p id="explanation-detail" class="text-xs sm:text-sm text-slate-200 leading-relaxed mb-2"></p>
+                            <div id="explanation-tip" class="text-xs bg-slate-950/70 p-2.5 rounded-lg border border-slate-700/80 text-amber-200"></div>
+                        </div>
+                    </div>
+                    <button id="btn-next-turn" onclick="nextBattleTurn()" class="rpg-btn mt-4 w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-sm shadow-lg">
+                        다음 턴 진행 ➡️
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- 모험가 길드 증서(프로필 카드) 모달 -->
+    <div id="modal-guild-card" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div class="rpg-panel rpg-gold-border rounded-2xl max-w-md w-full p-6 relative">
+            <button onclick="closeGuildCardModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold">✕</button>
+            <div class="text-center border-b border-slate-700 pb-4 mb-4">
+                <span class="text-xs text-amber-400 font-bold tracking-widest">ARCADIA ADVENTURER GUILD</span>
+                <h3 class="font-fantasy text-2xl font-black text-white mt-1">모험가 길드 공식 증서</h3>
+            </div>
+            <div class="flex items-center gap-4 bg-slate-900/90 p-4 rounded-xl border border-slate-700 mb-4">
+                <div id="card-avatar" class="text-5xl bg-slate-800 p-3 rounded-xl border border-amber-500/50">🧙‍♂️</div>
+                <div>
+                    <div id="card-title" class="text-xs text-amber-400 font-bold">견습 모험가</div>
+                    <div id="card-name" class="text-xl font-black text-white">용사</div>
+                    <div id="card-goal" class="text-xs text-slate-400 mt-0.5">자유로운 모험가</div>
+                </div>
+            </div>
+            <!-- 영역별 학습 스탯 -->
+            <div class="space-y-2.5 text-xs mb-5">
+                <div class="flex justify-between items-center bg-slate-900/60 px-3 py-2 rounded-lg">
+                    <span class="text-slate-300">⚔️ 어휘력 (공격력)</span>
+                    <span id="stat-vocab" class="font-black text-rose-400">Lv.1</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/60 px-3 py-2 rounded-lg">
+                    <span class="text-slate-300">🔮 문법력 (마법 위력)</span>
+                    <span id="stat-grammar" class="font-black text-blue-400">Lv.1</span>
+                </div>
+                <div class="flex justify-between items-center bg-slate-900/60 px-3 py-2 rounded-lg">
+                    <span class="text-slate-300">🛡️ 회화력 (방어/패링)</span>
+                    <span id="stat-speaking" class="font-black text-emerald-400">Lv.1</span>
+                </div>
+            </div>
+
+            <!-- 게스트일 경우 계정 연동 유도 -->
+            <div id="guest-link-box" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4">
+                <p class="text-xs text-amber-200 font-bold mb-2">💾 현재 게스트 상태입니다. 아이디와 비밀번호를 등록해 기록을 보존하세요!</p>
+                <div class="space-y-2">
+                    <input type="text" id="link-account-input" placeholder="새 아이디 입력 (중복 불가)" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-600 text-xs text-white">
+                    <input type="password" id="link-password-input" placeholder="비밀번호 설정 (4자 이상)" class="w-full px-3 py-1.5 rounded bg-slate-900 border border-slate-600 text-xs text-white">
+                    <button type="button" onclick="linkGuestAccount()" class="w-full py-2 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs">정식 계정 등록 및 데이터 연동</button>
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="logoutAccount()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-600">
+                    로그아웃 / 전환
+                </button>
+                <button onclick="closeGuildCardModal()" class="w-1/2 py-2.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-black">
+                    확인
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. 사운드 엔진 (Tone.js 기반 효과음 합성 - 외부 파일 불필요)
+           ========================================================================== */
+        let audioReady = false;
+        async function initAudio() {
+            if (!audioReady && typeof Tone !== 'undefined') {
+                await Tone.start();
+                audioReady = true;
+            }
+        }
+
+        function playSFX(type) {
+            if (!audioReady) return;
+            try {
+                const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+                if (type === 'click') {
+                    synth.triggerAttackRelease("C5", "32n");
+                } else if (type === 'hit') {
+                    synth.triggerAttackRelease(["E4", "G4", "B4"], "16n");
+                } else if (type === 'crit') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "8n");
+                } else if (type === 'parry') {
+                    synth.triggerAttackRelease(["A5", "E6"], "16n");
+                } else if (type === 'damage') {
+                    const low = new Tone.MembraneSynth().toDestination();
+                    low.triggerAttackRelease("C2", "8n");
+                } else if (type === 'levelup') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C4", "16n", now);
+                    synth.triggerAttackRelease("E4", "16n", now + 0.1);
+                    synth.triggerAttackRelease("G4", "16n", now + 0.2);
+                    synth.triggerAttackRelease("C5", "4n", now + 0.3);
+                }
+            } catch (e) { /* 오디오 예외 무시 */ }
+        }
+
+        /* ==========================================================================
+           2. 학습 데이터베이스 (초급 / 중급 / 고급 - 어휘, 문법 조립, 회화/패링)
+           ========================================================================== */
+        const QUEST_DATABASE = {
+            beginner: [
+                {
+                    id: 'b1',
+                    type: 'vocab', // 어휘 베기
+                    category: '초급 필수 어휘',
+                    prompt: '모험가가 어두운 동굴에서 길을 밝히기 위해 꺼낸 "횃불"을 뜻하는 영단어는?',
+                    sub: '힌트: T _ R C H',
+                    options: ['Torch', 'Shield', 'Potion', 'Castle'],
+                    answer: 'Torch',
+                    explanation: 'Torch는 "횃불" 또는 (영국식 영어로) "손전등"을 의미합니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 불꽃(Fire)을 들고 다닐 수 있게 만든 막대가 바로 Torch예요!'
+                },
+                {
+                    id: 'b2',
+                    type: 'grammar_build', // 마법 영창 (문장 조립)
+                    category: '기초 어순 마법 (주어+동사)',
+                    prompt: '다음 우리말에 맞게 단어 룬을 순서대로 터치해 마법진을 완성하세요!',
+                    sub: '"나는 매일 영어를 공부한다."',
+                    words: ['study', 'I', 'every day.', 'English'],
+                    answerSentence: 'I study English every day.',
+                    explanation: '영어는 [주어(나는) + 동사(공부한다) + 목적어(영어를)] 순서로 말합니다. 시간을 나타내는 every day는 문장 맨 뒤에 놓아요.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 한국어는 "나는 영어를 공부한다"지만, 영어는 행동(study)이 먼저 나와요!'
+                },
+                {
+                    id: 'b3',
+                    type: 'parry', // 패링 & 카운터 (문법 오류 쳐내기)
+                    category: '문법 오류 패링 (be동사)',
+                    prompt: '몬스터가 잘못된 문장으로 공격해 옵니다! 틀린 부분을 터치해 쳐내세요(패링)!',
+                    sub: '"그녀는 매우 용감한 기사이다." (틀린 단어 클릭)',
+                    sentenceTokens: ['She', 'are', 'a', 'very', 'brave', 'knight.'],
+                    errorIndex: 1, // 'are'
+                    correction: 'is',
+                    explanation: '주어가 3인칭 단수(She, He, It)일 때는 be동사로 are가 아닌 "is"를 써야 합니다. (She is ~)',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: You are / We are / They are 와 달리, 혼자 있는 She는 단짝인 is와 함께 써요!'
+                },
+                {
+                    id: 'b4',
+                    type: 'speaking', // 언어 방어막 (실전 회화)
+                    category: '마을 상점 생존 회화',
+                    prompt: '상점 주인 고블린이 물었습니다: "How much is this healing potion?" 가장 적절한 대답은?',
+                    sub: '상황: 물약의 가격을 물어보는 상황',
+                    options: [
+                        'It is 50 gold coins.',
+                        'I am fine, thank you.',
+                        'Nice to meet you.',
+                        'It is sunny today.'
+                    ],
+                    answer: 'It is 50 gold coins.',
+                    explanation: '"How much is ~?"는 가격을 묻는 핵심 표현입니다. "It is + 가격"으로 자연스럽게 대답할 수 있어요.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 해외 여행에서 물건 값을 물을 때 "How much is this?" 한 마디면 충분해요!'
+                }
+            ],
+            intermediate: [
+                {
+                    id: 'i1',
+                    type: 'vocab',
+                    category: '중급 모험 어휘',
+                    prompt: '고대 유적의 문에 적힌 "신비로운, 불가사의한"을 뜻하는 형용사는?',
+                    sub: '명사 Mystery(신비)에서 파생된 단어입니다.',
+                    options: ['Mysterious', 'Dangerous', 'Generous', 'Enormous'],
+                    answer: 'Mysterious',
+                    explanation: 'Mysterious는 "신비로운, 이해하기 힘든"이라는 뜻입니다. (Dangerous: 위험한, Generous: 관대한, Enormous: 거대한)',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 뒤에 -ous가 붙으면 대부분 "~한 성질을 가진"이라는 형용사가 됩니다!'
+                },
+                {
+                    id: 'i2',
+                    type: 'grammar_build',
+                    category: '현재완료 마법 (경험)',
+                    prompt: '단어 룬을 올바른 순서로 연결해 경험의 마법을 시전하세요!',
+                    sub: '"나는 전에 그 드래곤을 본 적이 있다."',
+                    words: ['have', 'seen', 'I', 'before.', 'that dragon'],
+                    answerSentence: 'I have seen that dragon before.',
+                    explanation: '[have + 과거분사(p.p)] 형태인 현재완료는 과거의 경험이 현재까지 이어질 때 사용합니다. see의 과거분사는 seen입니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: "해본 적 있다"를 말하고 싶을 땐 "I have + p.p" 공식을 떠올려 보세요!'
+                },
+                {
+                    id: 'i3',
+                    type: 'parry',
+                    category: '시제 오류 패링',
+                    prompt: '유적 가고일이 엉터리 시제로 저주를 겁니다! 문장에서 틀린 단어를 찾아 패링하세요!',
+                    sub: '"우리는 지난주에 그 보물 지도를 발견했다."',
+                    sentenceTokens: ['We', 'find', 'the', 'treasure', 'map', 'last', 'week.'],
+                    errorIndex: 1, // 'find'
+                    correction: 'found',
+                    explanation: '문장 끝에 "last week(지난주)"라는 명백한 과거 시점이 있으므로, 동사 find를 과거형인 "found"로 고쳐야 합니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: yesterday, last week, ago가 보이면 무조건 과거형 동사를 쓰세요!'
+                },
+                {
+                    id: 'i4',
+                    type: 'speaking',
+                    category: '상황별 실전 회화',
+                    prompt: '길을 잃은 여행자가 묻습니다: "Could you tell me how to get to the castle?" 적절한 응답은?',
+                    sub: '상황: 성으로 가는 길을 안내해 주는 대화',
+                    options: [
+                        'Go straight and turn left at the bridge.',
+                        'I went to the castle yesterday.',
+                        'The castle is very big and old.',
+                        'You must buy a new sword.'
+                    ],
+                    answer: 'Go straight and turn left at the bridge.',
+                    explanation: '"Could you tell me how to get to ~?"는 정중하게 길을 묻는 표현입니다. "Go straight(직진하세요)", "turn left(왼쪽으로 도세요)"로 안내합니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: "How to get to + 장소"는 "~에 가는 방법"이라는 뜻으로 여행 필수 표현이에요!'
+                }
+            ],
+            advanced: [
+                {
+                    id: 'a1',
+                    type: 'vocab',
+                    category: '고급 원어민 관용구',
+                    prompt: '마왕의 함정 앞에서 동료가 "식은 죽 먹기지! (아주 쉬운 일이야)"라고 말할 때 쓰는 표현은?',
+                    sub: '직역하면 "케이크 한 조각"이라는 재미있는 관용구입니다.',
+                    options: ['A piece of cake', 'Break a leg', 'Under the weather', 'Bite the bullet'],
+                    answer: 'A piece of cake',
+                    explanation: '"A piece of cake"는 케이크 한 조각을 먹는 것처럼 아주 쉬운 일을 뜻하는 대표 관용구입니다. (Break a leg: 행운을 빌어!)',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 원어민들은 "It is very easy" 대신 "It’s a piece of cake!"를 정말 자주 써요!'
+                },
+                {
+                    id: 'a2',
+                    type: 'grammar_build',
+                    category: '가정법 과거 마법',
+                    prompt: '현재 사실과 반대되는 상상의 마법진을 어순에 맞게 조립하세요!',
+                    sub: '"내가 날개를 가지고 있다면, 너에게 날아갈 텐데."',
+                    words: ['had', 'If', 'I', 'fly to you.', 'I would', 'wings,'],
+                    answerSentence: 'If I had wings, I would fly to you.',
+                    explanation: '현재 사실의 반대를 가정할 때는 [If + 주어 + 과거동사, 주어 + would + 동사원형]을 사용합니다. 실제 날개가 없으므로 had를 씁니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: "만약 ~라면 ~할 텐데"라는 상상을 할 때는 시제를 한 단계 과거로 낮추는 게 핵심이에요!'
+                },
+                {
+                    id: 'a3',
+                    type: 'parry',
+                    category: '고급 문법 패링 (관계대명사)',
+                    prompt: '마왕 사일런스의 암흑 주문을 꿰뚫어 보고 틀린 부분을 쳐내세요!',
+                    sub: '"이것이 마왕을 물리칠 수 있는 전설의 검이다."',
+                    sentenceTokens: ['This', 'is', 'the', 'legendary', 'sword', 'who', 'can', 'defeat', 'the', 'Demon', 'King.'],
+                    errorIndex: 5, // 'who'
+                    correction: 'which (또는 that)',
+                    explanation: '선행사가 사람이 아닌 사물(the legendary sword)이므로 주격 관계대명사 who 대신 "which"나 "that"을 써야 합니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 선행사가 사람이면 who, 사물이나 동물이면 which! 헷갈릴 땐 만능 열쇠 that을 기억하세요!'
+                },
+                {
+                    id: 'a4',
+                    type: 'speaking',
+                    category: '마왕과의 최종 설전 (고급 회화)',
+                    prompt: '마왕 사일런스: "Why do you keep fighting even when you make mistakes?" 가장 멋진 용사의 대답은?',
+                    sub: '상황: 실수를 두려워하지 않고 성장하는 용사의 신념',
+                    options: [
+                        'Every mistake is a stepping stone to mastery.',
+                        'Because I forgot to bring my lunch.',
+                        'I have no idea what you are talking about.',
+                        'Silence is always better than speaking.'
+                    ],
+                    answer: 'Every mistake is a stepping stone to mastery.',
+                    explanation: '"Every mistake is a stepping stone to mastery."는 "모든 실수는 숙달(완성)으로 가는 디딤돌이다"라는 격언적 표현입니다.',
+                    fairyTip: '🧚‍♀️ 요정의 꿀팁: 영어를 배울 때도 실수를 두려워하지 마세요! 틀린 문제가 바로 레벨업의 열쇠랍니다!'
+                }
+            ]
+        };
+
+        const MONSTERS_BY_STAGE = {
+            beginner: [
+                { name: '슬라임 워드', sprite: '🟢', hp: 80, shield: 1, weakness: '어휘 베기' },
+                { name: '고블린 스펠러', sprite: '👺', hp: 100, shield: 2, weakness: '문법 영창' }
+            ],
+            intermediate: [
+                { name: '고대 유적 가고일', sprite: '🗿', hp: 130, shield: 2, weakness: '패링 반격' },
+                { name: '시제의 망령', sprite: '👻', hp: 150, shield: 2, weakness: '문법 영창' }
+            ],
+            advanced: [
+                { name: '심연의 다크나이트', sprite: '黑', spriteEmoji: '🛡️', hp: 180, shield: 3, weakness: '고급 회화' },
+                { name: '마왕 사일런스 (Silence)', sprite: '😈', hp: 240, shield: 3, weakness: '모든 언어 마법' }
+            ]
+        };
+
+        const SHOP_CATALOG = [
+            { id: 'sword', name: '고대 룬의 성검', icon: '🗡️', desc: '어휘 및 일반 공격력 +10 증가', baseCost: 80, stat: 'atk', bonus: 10 },
+            { id: 'armor', name: '현자의 문법 로브', icon: '🥋', desc: '최대 체력 +30 및 방어력 +5 증가', baseCost: 80, stat: 'hp', bonus: 30 },
+            { id: 'fairy_ring', name: '루미의 축복 반지', icon: '💍', desc: '전투 승리 시 획득 골드 +25% 증가', baseCost: 120, stat: 'gold', bonus: 25 }
+        ];
+
+        /* ==========================================================================
+           3. 게임 상태 관리 (인메모리 + 계정 저장 시뮬레이션)
+           ========================================================================== */
+        const savedAccounts = {}; // 닉네임별 저장소 (이어하기 지원)
+
+        let player = {
+            username: '',
+            password: '',
+            isGuest: true,
+            name: '모험가',
+            avatar: '🧙‍♂️',
+            goal: '자유로운 모험가 (일상 회화)',
+            level: 1,
+            exp: 0,
+            maxExp: 100,
+            gold: 100,
+            atk: 35,
+            def: 10,
+            maxHp: 100,
+            goldBonus: 0,
+            stats: { vocab: 1, grammar: 1, speaking: 1 },
+            curses: [], // 오답 노트 (저주받은 문제 객체 배열)
+            upgrades: { sword: 0, armor: 0, fairy_ring: 0 }
+        };
+
+        // 전투 상태 변수
+        let battle = {
+            stage: 'beginner',
+            isPurifyMode: false,
+            queue: [],
+            currentIndex: 0,
+            monster: null,
+            monsterHp: 100,
+            monsterMaxHp: 100,
+            monsterShield: 2,
+            monsterMaxShield: 2,
+            playerHp: 100,
+            combo: 0,
+            ultGauge: 0,
+            turnStartTime: 0,
+            selectedWords: [] // 문장 조립용
+        };
+
+        /* ==========================================================================
+           4. UI 유틸리티 & 토스트 메시지 (alert 대체)
+           ========================================================================== */
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-800 border-amber-500 text-amber-200',
+                success: 'bg-emerald-950 border-emerald-400 text-emerald-200',
+                error: 'bg-rose-950 border-rose-400 text-rose-200'
+            };
+            toast.className = `px-4 py-3 rounded-xl border-2 shadow-2xl text-xs sm:text-sm font-bold text-center transition-all duration-300 transform translate-y-0 ${colors[type]}`;
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+
+        function switchScreen(screenId) {
+            ['screen-login', 'screen-profile-setup', 'screen-hub', 'screen-battle'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id).classList.remove('flex');
+            });
+            const target = document.getElementById(screenId);
+            target.classList.remove('hidden');
+            if (screenId === 'screen-hub' || screenId === 'screen-battle') {
+                target.classList.add('flex');
+            }
+        }
+
+        function syncAccountData() {
+            if (!player.isGuest && player.username) {
+                savedAccounts[player.username] = JSON.parse(JSON.stringify(player));
+            }
+        }
+
+        /* ==========================================================================
+           5. 로그인, 회원가입(아이디 중복 방지 & 비밀번호) & 프로필 생성 로직
+           ========================================================================== */
+        let isIdChecked = false;
+        let checkedIdValue = '';
+
+        function switchAuthMode(mode) {
+            playSFX('click');
+            const loginTab = document.getElementById('auth-tab-login');
+            const regTab = document.getElementById('auth-tab-register');
+            const loginForm = document.getElementById('form-login');
+            const regForm = document.getElementById('form-register');
+
+            if (mode === 'login') {
+                loginTab.className = 'py-2 rounded-md bg-amber-500 text-slate-950 font-black text-xs sm:text-sm transition';
+                regTab.className = 'py-2 rounded-md text-slate-400 hover:text-white font-bold text-xs sm:text-sm transition';
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+            } else {
+                regTab.className = 'py-2 rounded-md bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm transition';
+                loginTab.className = 'py-2 rounded-md text-slate-400 hover:text-white font-bold text-xs sm:text-sm transition';
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+
+        function resetIdCheck() {
+            isIdChecked = false;
+            checkedIdValue = '';
+            const msgEl = document.getElementById('id-check-msg');
+            msgEl.innerText = '아이디 입력 후 중복 확인을 눌러주세요.';
+            msgEl.className = 'text-left text-xs text-slate-400 px-1';
+        }
+
+        function checkDuplicateId() {
+            playSFX('click');
+            const regId = document.getElementById('reg-username').value.trim();
+            const msgEl = document.getElementById('id-check-msg');
+
+            if (regId.length < 2) {
+                msgEl.innerText = '❌ 아이디는 2자 이상 입력해 주세요.';
+                msgEl.className = 'text-left text-xs text-rose-400 px-1 font-bold';
+                isIdChecked = false;
+                return false;
+            }
+            if (savedAccounts[regId]) {
+                msgEl.innerText = `❌ [${regId}]는 이미 사용 중인 아이디입니다! 다른 아이디를 입력해 주세요.`;
+                msgEl.className = 'text-left text-xs text-rose-400 px-1 font-bold';
+                isIdChecked = false;
+                showToast('이미 존재하는 아이디입니다.', 'error');
+                return false;
+            }
+
+            msgEl.innerText = `✅ [${regId}]는 사용 가능한 멋진 용사 아이디입니다!`;
+            msgEl.className = 'text-left text-xs text-emerald-400 px-1 font-bold';
+            isIdChecked = true;
+            checkedIdValue = regId;
+            return true;
+        }
+
+        async function handleAccountRegister() {
+            await initAudio();
+            playSFX('click');
+            const regId = document.getElementById('reg-username').value.trim();
+            const regPw = document.getElementById('reg-password').value;
+            const regPwConfirm = document.getElementById('reg-password-confirm').value;
+
+            if (!regId) {
+                showToast('사용할 아이디를 입력해 주세요!', 'error');
+                return;
+            }
+            if (savedAccounts[regId]) {
+                showToast('이미 등록된 아이디입니다! 중복 확인을 진행해 주세요.', 'error');
+                checkDuplicateId();
+                return;
+            }
+            if (!isIdChecked || checkedIdValue !== regId) {
+                if (!checkDuplicateId()) return;
+            }
+            if (regPw.length < 4) {
+                showToast('비밀번호는 안전을 위해 4자 이상 설정해 주세요!', 'error');
+                return;
+            }
+            if (regPw !== regPwConfirm) {
+                showToast('비밀번호와 비밀번호 확인이 일치하지 않습니다!', 'error');
+                return;
+            }
+
+            // 신규 플레이어 초기 상태 세팅
+            player = {
+                username: regId,
+                password: regPw,
+                isGuest: false,
+                name: regId,
+                avatar: '🧙‍♂️',
+                goal: '자유로운 모험가 (일상 회화)',
+                level: 1,
+                exp: 0,
+                maxExp: 100,
+                gold: 100,
+                atk: 35,
+                def: 10,
+                maxHp: 100,
+                goldBonus: 0,
+                stats: { vocab: 1, grammar: 1, speaking: 1 },
+                curses: [],
+                upgrades: { sword: 0, armor: 0, fairy_ring: 0 }
+            };
+
+            syncAccountData();
+            document.getElementById('setup-name').value = regId;
+            showToast(`🎉 회원가입 완료! [${regId}] 용사님의 프로필을 설정해 주세요.`, 'success');
+            switchScreen('screen-profile-setup');
+        }
+
+        async function handleAccountLogin() {
+            await initAudio();
+            playSFX('click');
+            const inputId = document.getElementById('login-username').value.trim();
+            const inputPw = document.getElementById('login-password').value;
+
+            if (!inputId) {
+                showToast('용사 아이디를 입력해 주세요!', 'error');
+                return;
+            }
+            if (!inputPw) {
+                showToast('비밀번호를 입력해 주세요!', 'error');
+                return;
+            }
+
+            const account = savedAccounts[inputId];
+            if (!account) {
+                playSFX('damage');
+                showToast(`등록되지 않은 아이디입니다. [신규 회원가입] 탭에서 먼저 가입해 주세요!`, 'error');
+                return;
+            }
+            if (account.password !== inputPw) {
+                playSFX('damage');
+                showToast('비밀번호가 일치하지 않습니다! 다시 확인해 주세요.', 'error');
+                return;
+            }
+
+            player = JSON.parse(JSON.stringify(account));
+            document.getElementById('login-password').value = '';
+            showToast(`환영합니다, ${player.name} 용사님! 모험 기록을 성공적으로 불러왔습니다.`, 'success');
+            enterHub();
+        }
+
+        async function startGuestMode() {
+            await initAudio();
+            playSFX('click');
+            player = {
+                username: '',
+                password: '',
+                isGuest: true,
+                name: '견습용사',
+                avatar: '🧙‍♂️',
+                goal: '자유로운 모험가 (일상 회화)',
+                level: 1,
+                exp: 0,
+                maxExp: 100,
+                gold: 100,
+                atk: 35,
+                def: 10,
+                maxHp: 100,
+                goldBonus: 0,
+                stats: { vocab: 1, grammar: 1, speaking: 1 },
+                curses: [],
+                upgrades: { sword: 0, armor: 0, fairy_ring: 0 }
+            };
+            document.getElementById('setup-name').value = '견습용사';
+            switchScreen('screen-profile-setup');
+        }
+
+        let tempAvatar = '🧙‍♂️';
+        function selectAvatar(emoji) {
+            playSFX('click');
+            tempAvatar = emoji;
+            document.querySelectorAll('.avatar-opt').forEach(btn => {
+                btn.classList.remove('border-amber-500');
+                btn.classList.add('border-slate-700');
+                if (btn.innerText.trim() === emoji) {
+                    btn.classList.remove('border-slate-700');
+                    btn.classList.add('border-amber-500');
+                }
+            });
+        }
+
+        function selectPlacement(level, btnEl) {
+            playSFX('click');
+            document.querySelectorAll('.place-btn').forEach(b => {
+                b.classList.remove('border-amber-500', 'text-amber-300');
+                b.classList.add('border-slate-600');
+            });
+            btnEl.classList.remove('border-slate-600');
+            btnEl.classList.add('border-amber-500', 'text-amber-300');
+
+            const fb = document.getElementById('placement-feedback');
+            if (level === 'beginner') {
+                fb.innerText = "✔️ 'go' 선택됨: 기초부터 탄탄히! [초급: 시작의 마을]을 추천합니다.";
+            } else if (level === 'intermediate') {
+                fb.innerText = "✔️ 'went' 선택됨: 과거 시제를 아시는군요! [중급: 신비의 숲]까지 바로 도전 가능합니다.";
+            } else {
+                fb.innerText = "✔️ 'have gone' 선택됨: 훌륭한 감각입니다! 모든 지역에 도전할 준비가 되셨군요.";
+            }
+        }
+
+        function completeProfileSetup() {
+            playSFX('levelup');
+            const nameVal = document.getElementById('setup-name').value.trim() || '용사';
+            const goalVal = document.getElementById('setup-goal').value;
+
+            player.name = nameVal;
+            player.avatar = tempAvatar;
+            player.goal = goalVal;
+
+            syncAccountData();
+            showToast(`📜 [${player.name}] 용사님의 모험가 길드 증서가 발급되었습니다!`, 'success');
+            enterHub();
+        }
+
+        /* ==========================================================================
+           6. 메인 로비(허브) & 대장간 & 오답 정화 관리
+           ========================================================================== */
+        function getRankTitle(lv) {
+            if (lv >= 5) return '언어의 대현자';
+            if (lv >= 3) return '룬 나이트';
+            return '견습 모험가';
+        }
+
+        function enterHub() {
+            switchScreen('screen-hub');
+            updateHubUI();
+            switchHubTab('map');
+        }
+
+        function updateHubUI() {
+            document.getElementById('hub-avatar').innerText = player.avatar;
+            document.getElementById('hub-name').innerText = player.name;
+            document.getElementById('hub-level').innerText = player.level;
+            document.getElementById('hub-goal').innerText = player.goal;
+            document.getElementById('hub-title-badge').innerText = getRankTitle(player.level);
+            document.getElementById('hub-account-badge').innerText = player.isGuest ? '게스트 모드' : `ID: ${player.username}`;
+
+            document.getElementById('hub-exp').innerText = player.exp;
+            document.getElementById('hub-max-exp').innerText = player.maxExp;
+            document.getElementById('hub-exp-bar').style.width = `${Math.min(100, (player.exp / player.maxExp) * 100)}%`;
+            document.getElementById('hub-gold').innerText = `${player.gold} G`;
+
+            // 저주(오답) 배지 업데이트
+            const curseBadge = document.getElementById('curse-count-badge');
+            if (player.curses.length > 0) {
+                curseBadge.innerText = player.curses.length;
+                curseBadge.classList.remove('hidden');
+            } else {
+                curseBadge.classList.add('hidden');
+            }
+
+            renderCurseList();
+            renderShop();
+        }
+
+        function switchHubTab(tab) {
+            playSFX('click');
+            ['map', 'curse', 'shop'].forEach(t => {
+                document.getElementById(`hub-tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-btn-${t}`);
+                btn.className = 'py-3 rounded-xl bg-slate-800/90 text-slate-300 hover:bg-slate-800 font-bold text-sm border border-slate-700 flex items-center justify-center gap-1.5 relative';
+            });
+            document.getElementById(`hub-tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tab}`);
+            activeBtn.className = 'py-3 rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md flex items-center justify-center gap-1.5 relative';
+        }
+
+        function renderCurseList() {
+            const listEl = document.getElementById('curse-list');
+            const btnPurify = document.getElementById('btn-start-purify');
+            if (player.curses.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-10 text-slate-400 text-sm">✨ 현재 봉인된 저주(오답)가 없습니다! 완벽한 모험을 이어가고 계시네요.</div>`;
+                btnPurify.disabled = true;
+                btnPurify.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+            btnPurify.disabled = false;
+            btnPurify.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            listEl.innerHTML = player.curses.map((q, idx) => `
+                <div class="bg-slate-900/90 border border-rose-500/30 rounded-xl p-3.5 flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-rose-400">👻 저주받은 기억 #${idx + 1} (${q.category})</span>
+                    </div>
+                    <p class="text-sm font-bold text-white">${q.prompt}</p>
+                    <p class="text-xs text-slate-400">${q.explanation}</p>
+                </div>
+            `).join('');
+        }
+
+        function renderShop() {
+            const container = document.getElementById('shop-items');
+            container.innerHTML = SHOP_CATALOG.map(item => {
+                const lv = player.upgrades[item.id] || 0;
+                const cost = item.baseCost + lv * 50;
+                return `
+                    <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-3xl">${item.icon}</span>
+                                <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-xs font-bold">+${lv} 강화</span>
+                            </div>
+                            <h4 class="font-black text-white text-sm mb-1">${item.name}</h4>
+                            <p class="text-xs text-slate-400 mb-4">${item.desc}</p>
+                        </div>
+                        <button onclick="buyUpgrade('${item.id}')" class="rpg-btn w-full py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs">
+                            💰 ${cost} G 강화하기
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function buyUpgrade(itemId) {
+            const item = SHOP_CATALOG.find(i => i.id === itemId);
+            const lv = player.upgrades[itemId] || 0;
+            const cost = item.baseCost + lv * 50;
+
+            if (player.gold < cost) {
+                playSFX('damage');
+                showToast('골드가 부족합니다! 몬스터를 물리쳐 골드를 모아보세요.', 'error');
+                return;
+            }
+            playSFX('crit');
+            player.gold -= cost;
+            player.upgrades[itemId] = lv + 1;
+
+            if (item.stat === 'atk') player.atk += item.bonus;
+            if (item.stat === 'hp') { player.maxHp += item.bonus; player.def += 5; }
+            if (item.stat === 'gold') player.goldBonus += item.bonus;
+
+            syncAccountData();
+            updateHubUI();
+            showToast(`⚒️ [${item.name} +${lv + 1}] 강화 성공! 용사가 더욱 강해졌습니다!`, 'success');
+        }
+
+        /* 길드 증서 모달 */
+        function openGuildCardModal() {
+            playSFX('click');
+            document.getElementById('card-avatar').innerText = player.avatar;
+            document.getElementById('card-title').innerText = getRankTitle(player.level);
+            document.getElementById('card-name').innerText = `${player.name} (Lv.${player.level})`;
+            document.getElementById('card-goal').innerText = player.goal;
+            document.getElementById('stat-vocab').innerText = `Lv.${player.stats.vocab}`;
+            document.getElementById('stat-grammar').innerText = `Lv.${player.stats.grammar}`;
+            document.getElementById('stat-speaking').innerText = `Lv.${player.stats.speaking}`;
+
+            document.getElementById('guest-link-box').style.display = player.isGuest ? 'block' : 'none';
+            document.getElementById('modal-guild-card').classList.remove('hidden');
+        }
+
+        function closeGuildCardModal() {
+            document.getElementById('modal-guild-card').classList.add('hidden');
+        }
+
+        function linkGuestAccount() {
+            const newId = document.getElementById('link-account-input').value.trim();
+            const newPw = document.getElementById('link-password-input').value;
+
+            if (newId.length < 2) {
+                showToast('아이디는 2자 이상 입력해 주세요.', 'error');
+                return;
+            }
+            if (savedAccounts[newId]) {
+                showToast(`❌ [${newId}]는 이미 사용 중인 아이디입니다! 다른 아이디를 선택해 주세요.`, 'error');
+                return;
+            }
+            if (newPw.length < 4) {
+                showToast('비밀번호는 4자 이상으로 설정해 주세요.', 'error');
+                return;
+            }
+
+            player.username = newId;
+            player.password = newPw;
+            player.isGuest = false;
+            syncAccountData();
+            updateHubUI();
+            closeGuildCardModal();
+            showToast(`✅ 계정 [${newId}] 등록 및 연동 완료! 다음부터 아이디와 비밀번호로 이어할 수 있습니다.`, 'success');
+        }
+
+        function logoutAccount() {
+            syncAccountData();
+            closeGuildCardModal();
+            document.getElementById('login-username').value = player.username || '';
+            document.getElementById('login-password').value = '';
+            switchAuthMode('login');
+            switchScreen('screen-login');
+            showToast('안전하게 모험 기록을 저장하고 로그아웃했습니다.', 'info');
+        }
+
+        /* ==========================================================================
+           7. 고퀄리티 전략 전투 시스템 (어휘 베기 / 마법 영창 / 패링 / 궁극기)
+           ========================================================================== */
+        function startAdventure(stage) {
+            playSFX('click');
+            battle.stage = stage;
+            battle.isPurifyMode = false;
+            // 문제 셔플 후 세팅
+            battle.queue = [...QUEST_DATABASE[stage]].sort(() => Math.random() - 0.5);
+            battle.currentIndex = 0;
+            battle.playerHp = player.maxHp;
+            battle.combo = 0;
+            battle.ultGauge = 0;
+
+            const stageNames = { beginner: '초급: 시작의 초원', intermediate: '중급: 신비의 숲', advanced: '고급: 침묵의 마왕성' };
+            document.getElementById('battle-stage-badge').innerText = stageNames[stage];
+
+            setupMonsterForWave(0);
+            switchScreen('screen-battle');
+            renderCurrentQuestion();
+        }
+
+        function startPurificationBattle() {
+            if (player.curses.length === 0) return;
+            playSFX('click');
+            battle.stage = 'purify';
+            battle.isPurifyMode = true;
+            battle.queue = [...player.curses];
+            battle.currentIndex = 0;
+            battle.playerHp = player.maxHp;
+            battle.combo = 0;
+            battle.ultGauge = 50; // 정화 전투는 궁극기 50% 충전 시작
+
+            document.getElementById('battle-stage-badge').innerText = '🔮 저주 정화 의식';
+            setupMonsterForWave(0);
+            switchScreen('screen-battle');
+            renderCurrentQuestion();
+        }
+
+        function setupMonsterForWave(idx) {
+            const pool = battle.isPurifyMode
+                ? [{ name: '저주받은 기억의 망령', sprite: '👿', hp: 100, shield: 1, weakness: '기억 정화' }]
+                : MONSTERS_BY_STAGE[battle.stage];
+            const mTemplate = pool[idx % pool.length];
+            battle.monster = mTemplate;
+            battle.monsterMaxHp = mTemplate.hp;
+            battle.monsterHp = mTemplate.hp;
+            battle.monsterMaxShield = mTemplate.shield;
+            battle.monsterShield = mTemplate.shield;
+            updateBattleHUD();
+        }
+
+        function updateBattleHUD() {
+            document.getElementById('battle-progress').innerText = `Quest ${battle.currentIndex + 1} / ${battle.queue.length}`;
+            document.getElementById('combo-display').innerText = `🔥 ${battle.combo} COMBO`;
+
+            // 몬스터 UI
+            document.getElementById('monster-name').innerText = battle.monster.name;
+            document.getElementById('monster-sprite').innerText = battle.monster.spriteEmoji || battle.monster.sprite;
+            document.getElementById('monster-weakness').innerText = `약점: ${battle.monster.weakness}`;
+            document.getElementById('monster-hp').innerText = Math.max(0, battle.monsterHp);
+            document.getElementById('monster-max-hp').innerText = battle.monsterMaxHp;
+            document.getElementById('monster-hp-bar').style.width = `${Math.max(0, (battle.monsterHp / battle.monsterMaxHp) * 100)}%`;
+
+            // 실드 UI
+            const shieldText = battle.monsterShield > 0 ? `${battle.monsterShield} / ${battle.monsterMaxShield}` : '💥 BREAK! (피해 1.5배)';
+            document.getElementById('monster-shield-text').innerText = shieldText;
+            document.getElementById('monster-shield-bar').style.width = `${(battle.monsterShield / battle.monsterMaxShield) * 100}%`;
+
+            // 용사 UI
+            document.getElementById('battle-player-avatar').innerText = player.avatar;
+            document.getElementById('battle-player-name').innerText = player.name;
+            document.getElementById('battle-atk').innerText = player.atk;
+            document.getElementById('battle-def').innerText = player.def;
+            document.getElementById('player-hp').innerText = Math.max(0, battle.playerHp);
+            document.getElementById('player-max-hp').innerText = player.maxHp;
+            document.getElementById('player-hp-bar').style.width = `${Math.max(0, (battle.playerHp / player.maxHp) * 100)}%`;
+
+            // 궁극기 UI
+            document.getElementById('ult-percent').innerText = `${battle.ultGauge}%`;
+            document.getElementById('ult-bar').style.width = `${battle.ultGauge}%`;
+            const ultBtn = document.getElementById('btn-ultimate');
+            if (battle.ultGauge >= 100) {
+                ultBtn.disabled = false;
+                ultBtn.className = 'w-full py-2 rounded-lg bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 text-slate-950 font-black text-xs ultimate-ready cursor-pointer';
+                ultBtn.innerText = '🔥 궁극기 발동! [언어의 폭풍 - STORM OF WORDS]';
+            } else {
+                ultBtn.disabled = true;
+                ultBtn.className = 'w-full py-2 rounded-lg bg-slate-800 text-slate-500 font-black text-xs border border-slate-700';
+                ultBtn.innerText = `⚡ 궁극기 [언어의 폭풍] 충전 중 (${battle.ultGauge}%)`;
+            }
+        }
+
+        function triggerVFX(emoji, isMonsterHit = true) {
+            const vfx = document.getElementById('vfx-overlay');
+            vfx.innerText = emoji;
+            vfx.classList.remove('animate-slash');
+            void vfx.offsetWidth; // reflow
+            vfx.classList.add('animate-slash');
+
+            if (isMonsterHit) {
+                const mCard = document.getElementById('monster-card');
+                mCard.classList.remove('animate-shake');
+                void mCard.offsetWidth;
+                mCard.classList.add('animate-shake');
+            }
+        }
+
+        function renderCurrentQuestion() {
+            const q = battle.queue[battle.currentIndex];
+            battle.turnStartTime = Date.now();
+            battle.selectedWords = [];
+
+            document.getElementById('fairy-explanation-box').classList.add('hidden');
+            const area = document.getElementById('battle-interaction-area');
+            area.innerHTML = '';
+
+            const modeBadges = {
+                vocab: { text: '⚔️ 어휘 베기 (단어 공격)', style: 'bg-rose-500/20 border-rose-500/40 text-rose-300' },
+                grammar_build: { text: '🔮 마법 영창 (어순 조립)', style: 'bg-blue-500/20 border-blue-500/40 text-blue-300' },
+                parry: { text: '🛡️ 패링 & 카운터 (오류 쳐내기)', style: 'bg-amber-500/20 border-amber-500/40 text-amber-300' },
+                speaking: { text: '💬 언어 방어막 (실전 회화)', style: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' }
+            };
+            const badge = modeBadges[q.type];
+            const badgeEl = document.getElementById('battle-mode-badge');
+            badgeEl.innerText = badge.text;
+            badgeEl.className = `px-3 py-1 rounded-lg border text-xs font-black ${badge.style}`;
+
+            document.getElementById('battle-category-tag').innerText = q.category;
+            document.getElementById('question-prompt').innerText = q.prompt;
+            document.getElementById('question-sub').innerText = q.sub;
+
+            // 유형별 인터랙션 UI 렌더링
+            if (q.type === 'vocab' || q.type === 'speaking') {
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'rpg-btn p-4 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-600 hover:border-amber-400 text-left font-bold text-sm sm:text-base text-white flex items-center justify-between';
+                    btn.innerHTML = `<span>${opt}</span><span class="text-slate-500 text-xs">선택 ➔</span>`;
+                    btn.onclick = () => evaluateAnswer(opt === q.answer, opt);
+                    grid.appendChild(btn);
+                });
+                area.appendChild(grid);
+            } 
+            else if (q.type === 'grammar_build') {
+                // 조립된 문장 슬롯 + 단어 룬 버튼
+                area.innerHTML = `
+                    <div id="assembled-zone" class="min-h-[54px] p-3 mb-3 rounded-xl bg-slate-900 border-2 border-dashed border-blue-500/50 flex flex-wrap gap-2 items-center">
+                        <span class="text-xs text-slate-500">아래 단어 룬을 순서대로 터치하세요...</span>
+                    </div>
+                    <div id="word-pool" class="flex flex-wrap gap-2 mb-4"></div>
+                    <div class="flex gap-2">
+                        <button onclick="resetWordBuild()" class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold border border-slate-600">🔄 초기화</button>
+                        <button onclick="submitWordBuild()" class="rpg-btn flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-black">🔮 마법 영창 발동!</button>
+                    </div>
+                `;
+                renderWordPool(q.words);
+            }
+            else if (q.type === 'parry') {
+                // 문장 토큰 중 틀린 단어 터치
+                const tokenWrap = document.createElement('div');
+                tokenWrap.className = 'flex flex-wrap gap-2 justify-center p-4 rounded-xl bg-slate-900/90 border border-amber-500/30';
+                q.sentenceTokens.forEach((tok, idx) => {
+                    const tBtn = document.createElement('button');
+                    tBtn.className = 'rpg-btn px-3.5 py-2.5 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 border border-slate-600 font-black text-base text-amber-100 transition';
+                    tBtn.innerText = tok;
+                    tBtn.onclick = () => evaluateAnswer(idx === q.errorIndex, tok);
+                    tokenWrap.appendChild(tBtn);
+                });
+                area.appendChild(tokenWrap);
+            }
+        }
+
+        function renderWordPool(words) {
+            const pool = document.getElementById('word-pool');
+            pool.innerHTML = '';
+            words.forEach((w, idx) => {
+                const btn = document.createElement('button');
+                btn.id = `rune-btn-${idx}`;
+                btn.className = 'rpg-btn px-4 py-2.5 rounded-xl bg-indigo-950 hover:bg-indigo-800 border border-indigo-400 text-indigo-100 font-bold text-sm shadow';
+                btn.innerText = w;
+                btn.onclick = () => {
+                    playSFX('click');
+                    if (battle.selectedWords.some(item => item.idx === idx)) return;
+                    battle.selectedWords.push({ idx, word: w });
+                    btn.classList.add('opacity-30', 'pointer-events-none');
+                    updateAssembledZone();
+                };
+                pool.appendChild(btn);
+            });
+        }
+
+        function updateAssembledZone() {
+            const zone = document.getElementById('assembled-zone');
+            if (battle.selectedWords.length === 0) {
+                zone.innerHTML = `<span class="text-xs text-slate-500">아래 단어 룬을 순서대로 터치하세요...</span>`;
+                return;
+            }
+            zone.innerHTML = battle.selectedWords.map(item => `
+                <span class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold text-sm shadow">${item.word}</span>
+            `).join('');
+        }
+
+        function resetWordBuild() {
+            playSFX('click');
+            battle.selectedWords = [];
+            const q = battle.queue[battle.currentIndex];
+            renderWordPool(q.words);
+            updateAssembledZone();
+        }
+
+        function submitWordBuild() {
+            const q = battle.queue[battle.currentIndex];
+            const userSentence = battle.selectedWords.map(i => i.word).join(' ');
+            evaluateAnswer(userSentence === q.answerSentence, userSentence);
+        }
+
+        function evaluateAnswer(isCorrect, userChoice) {
+            const q = battle.queue[battle.currentIndex];
+            const elapsedSec = (Date.now() - battle.turnStartTime) / 1000;
+            const isFastCrit = elapsedSec < 6.0; // 6초 이내 정답 시 크리티컬!
+
+            // 중복 클릭 방지
+            document.getElementById('battle-interaction-area').innerHTML = '';
+
+            const expBox = document.getElementById('fairy-explanation-box');
+            const expHeader = document.getElementById('explanation-header');
+            const expDetail = document.getElementById('explanation-detail');
+            const expTip = document.getElementById('explanation-tip');
+
+            expBox.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500', 'bg-rose-950/80', 'border-rose-500');
+
+            if (isCorrect) {
+                battle.combo += 1;
+                battle.ultGauge = Math.min(100, battle.ultGauge + 35);
+
+                // 실드 파괴 및 브레이크 판정
+                let breakBonus = 1.0;
+                if (battle.monsterShield > 0) {
+                    battle.monsterShield -= 1;
+                    if (battle.monsterShield === 0) {
+                        breakBonus = 1.5;
+                        showToast('💥 실드 파괴! 몬스터가 [브레이크] 상태에 빠졌습니다!', 'success');
+                    }
+                } else {
+                    breakBonus = 1.5;
+                }
+
+                const critMult = isFastCrit ? 1.3 : 1.0;
+                const damage = Math.round((player.atk + battle.combo * 5) * critMult * breakBonus);
+                battle.monsterHp = Math.max(0, battle.monsterHp - damage);
+
+                // 영역별 스탯 경험치 상승
+                if (q.type === 'vocab') player.stats.vocab += 1;
+                if (q.type === 'grammar_build' || q.type === 'parry') player.stats.grammar += 1;
+                if (q.type === 'speaking') player.stats.speaking += 1;
+
+                // 저주 정화 모드였다면 오답 목록에서 제거
+                if (battle.isPurifyMode) {
+                    player.curses = player.curses.filter(c => c.id !== q.id);
+                }
+
+                if (q.type === 'parry') {
+                    playSFX('parry');
+                    triggerVFX('🛡️⚡', true);
+                    expHeader.innerText = `🛡️ 완벽한 패링 성공! 오류 ["${userChoice}" ➔ "${q.correction}"] 쳐내기! (-${damage} DMG)`;
+                } else if (isFastCrit) {
+                    playSFX('crit');
+                    triggerVFX('💥⚔️', true);
+                    expHeader.innerText = `⚡ 쾌속 크리티컬 히트! (-${damage} DMG)`;
+                } else {
+                    playSFX('hit');
+                    triggerVFX('⚔️✨', true);
+                    expHeader.innerText = `✨ 명중! 몬스터에게 ${damage}의 피해를 입혔습니다!`;
+                }
+
+                expBox.classList.add('bg-emerald-950/80', 'border-emerald-500');
+                expHeader.className = 'font-black text-sm sm:text-base text-emerald-300 mb-1';
+            } else {
+                // 오답 처리: 콤보 초기화 + 용사 피격 + 저주(오답 노트) 자동 등록
+                battle.combo = 0;
+                playSFX('damage');
+                triggerVFX('💔🔥', false);
+
+                const rawDmg = battle.stage === 'advanced' ? 35 : (battle.stage === 'intermediate' ? 25 : 20);
+                const takenDmg = Math.max(5, rawDmg - Math.floor(player.def / 2));
+                battle.playerHp = Math.max(0, battle.playerHp - takenDmg);
+
+                // 오답 노트에 없으면 추가
+                if (!player.curses.some(c => c.id === q.id)) {
+                    player.curses.push(q);
+                }
+
+                expBox.classList.add('bg-rose-950/80', 'border-rose-500');
+                expHeader.className = 'font-black text-sm sm:text-base text-rose-300 mb-1';
+                expHeader.innerText = `💥 몬스터의 반격! (-${takenDmg} HP) — 기억의 요정이 해설을 준비했어요!`;
+            }
+
+            expDetail.innerText = q.explanation;
+            expTip.innerText = q.fairyTip;
+            updateBattleHUD();
+
+            // 전투 종료 체크
+            const nextBtn = document.getElementById('btn-next-turn');
+            if (battle.playerHp <= 0) {
+                nextBtn.innerText = '🥀 체력이 고갈되었습니다... 길드로 귀환';
+                nextBtn.onclick = () => finishBattle(false);
+            } else if (battle.monsterHp <= 0 || battle.currentIndex >= battle.queue.length - 1) {
+                nextBtn.innerText = '🏆 스테이지 클리어! 보상 수령하기';
+                nextBtn.onclick = () => finishBattle(true);
+            } else {
+                nextBtn.innerText = '다음 턴 진행 ➡️';
+                nextBtn.onclick = () => nextBattleTurn();
+            }
+        }
+
+        function triggerUltimate() {
+            if (battle.ultGauge < 100) return;
+            playSFX('crit');
+            battle.ultGauge = 0;
+            battle.combo += 2;
+            const ultDmg = player.atk * 3;
+            battle.monsterHp = Math.max(0, battle.monsterHp - ultDmg);
+            battle.monsterShield = 0;
+
+            triggerVFX('🌪️⚡🔥', true);
+            showToast(`⚡ 궁극기 [언어의 폭풍] 발동! 몬스터에게 ${ultDmg}의 초강력 피해!`, 'success');
+            updateBattleHUD();
+
+            if (battle.monsterHp <= 0) {
+                const expBox = document.getElementById('fairy-explanation-box');
+                expBox.classList.remove('hidden');
+                expBox.classList.add('bg-amber-950/90', 'border-amber-400');
+                document.getElementById('explanation-header').innerText = '🌟 궁극기로 몬스터를 일격에 소멸시켰습니다!';
+                document.getElementById('explanation-detail').innerText = '고대 언어의 폭풍이 어둠의 침묵을 걷어냈습니다!';
+                document.getElementById('explanation-tip').innerText = '🧚‍♀️ 요정 루미: "대단해요 용사님! 완벽한 언어의 힘이었습니다!"';
+                const nextBtn = document.getElementById('btn-next-turn');
+                nextBtn.innerText = '🏆 승리 보상 수령하기';
+                nextBtn.onclick = () => finishBattle(true);
+            }
+        }
+
+        function nextBattleTurn() {
+            playSFX('click');
+            battle.currentIndex += 1;
+            if (battle.currentIndex < battle.queue.length) {
+                // 중간에 새로운 몬스터 등장 연출
+                if (battle.currentIndex === 2 && !battle.isPurifyMode) {
+                    setupMonsterForWave(1);
+                    showToast(`⚠️ 새로운 마수 [${battle.monster.name}]이(가) 나타났습니다!`, 'info');
+                }
+                renderCurrentQuestion();
+            } else {
+                finishBattle(true);
+            }
+        }
+
+        function finishBattle(isVictory) {
+            if (isVictory) {
+                playSFX('levelup');
+                const baseExp = battle.stage === 'advanced' ? 90 : (battle.stage === 'intermediate' ? 65 : 45);
+                const baseGold = battle.stage === 'advanced' ? 120 : (battle.stage === 'intermediate' ? 80 : 50);
+                const totalGold = Math.round(baseGold * (1 + player.goldBonus / 100));
+
+                player.exp += baseExp;
+                player.gold += totalGold;
+
+                let levelUpMsg = '';
+                while (player.exp >= player.maxExp) {
+                    player.exp -= player.maxExp;
+                    player.level += 1;
+                    player.maxExp = Math.round(player.maxExp * 1.3);
+                    player.maxHp += 20;
+                    player.atk += 8;
+                    player.def += 3;
+                    levelUpMsg = ` 🎉 LEVEL UP! (Lv.${player.level})`;
+                }
+
+                showToast(`🏆 승리! +${baseExp} EXP, +${totalGold} G 획득!${levelUpMsg}`, 'success');
+            } else {
+                playSFX('damage');
+                showToast('길드로 귀환하여 체력을 회복했습니다. 오답 정화소에서 복습해 보세요!', 'error');
+            }
+
+            syncAccountData();
+            enterHub();
+        }
+
+        function retreatToHub() {
+            playSFX('click');
+            syncAccountData();
+            enterHub();
+            showToast('전투에서 후퇴하여 길드 로비로 돌아왔습니다.', 'info');
+        }
+    </script>
+</body>
+</html>
